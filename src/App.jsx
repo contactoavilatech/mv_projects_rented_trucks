@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, FolderKanban, Truck, History, 
   Sun, Moon, UserCheck, Plus, Trash2, RotateCcw, 
-  Activity, Layers, Globe, MapPin, Wrench,
-  CalendarDays, CheckSquare, ChevronRight, ChevronLeft
+  Activity, Layers, Globe, MapPin, Wrench, Users,
+  CalendarDays, CheckSquare, ChevronRight, ChevronLeft, Phone
 } from 'lucide-react';
 
 // Bilingual Dictionary
@@ -19,6 +19,7 @@ const t = {
       dashboard: "Dashboard",
       gantt: "Weekly Gantt Timeline",
       projects: "Projects & Tasks",
+      crews: "Field Crews",
       fleet: "Fleet Telemetry",
       archive: "Audit & Trash"
     },
@@ -43,6 +44,13 @@ const t = {
     projectsHeader: "Projects & Task Execution",
     projectsSub: "Track multi-stage task lists, site milestones, and completion percentages.",
     newProjectBtn: "New Project Input",
+    crewsHeader: "Active Field Crews (Cuadrillas)",
+    crewsSub: "Manage operational field teams, supervisors, regional assignments, and crew status.",
+    registerCrewBtn: "Register New Crew",
+    crewLeader: "Crew Leader / Supervisor",
+    assignedProject: "Assigned Project",
+    operationalZone: "Operational Zone",
+    status: "Status",
     viewerRestricted: "Viewer mode: Input creation restricted",
     lead: "Lead",
     site: "Site",
@@ -55,11 +63,10 @@ const t = {
     fleetSub: "Track field vehicles, fuel levels, maintenance hours, and active assignments.",
     registerFleetBtn: "Register Fleet Asset",
     unitAsset: "Unit Asset",
-    assignedProject: "Assigned Project",
+    assignedProjectField: "Assigned Project",
     locationSite: "Location / Site",
     fuelLevel: "Fuel Level",
     opHours: "Operation Hours",
-    status: "Status",
     trashHeader: "Compliance Trash Bin & Audit Trail",
     trashSub: "Soft-deleted items are safely archived here. Administrators can restore records anytime.",
     deletedRecords: "Soft-Deleted Records",
@@ -68,12 +75,15 @@ const t = {
     cancel: "Cancel",
     saveProject: "Save Project",
     registerUnit: "Register Unit",
+    registerCrewTitle: "Register Field Crew",
     projectName: "Project Name",
     projectLead: "Project Lead",
     siteLocation: "Site Location",
     startDate: "Start Date",
     endDate: "End Date",
-    unitName: "Unit Asset Name"
+    unitName: "Unit Asset Name",
+    crewNamePlaceholder: "e.g., Alnardo Velasquez Squad",
+    zonePlaceholder: "e.g., Caracas / Chacao"
   },
   es: {
     title: "Centro de Mando OS",
@@ -86,6 +96,7 @@ const t = {
       dashboard: "Tablero",
       gantt: "Diagrama de Gantt",
       projects: "Proyectos y Tareas",
+      crews: "Cuadrillas de Campo",
       fleet: "Telemetría de Flota",
       archive: "Auditoría y Papelera"
     },
@@ -110,6 +121,13 @@ const t = {
     projectsHeader: "Gestión de Proyectos y Tareas",
     projectsSub: "Supervise listas de tareas por hitos, avances de campo y porcentaje de ejecución.",
     newProjectBtn: "Nueva Entrada de Proyecto",
+    crewsHeader: "Cuadrillas de Campo Activas",
+    crewsSub: "Administre equipos de terreno, líderes de cuadrilla, asignaciones regionales y estado operativo.",
+    registerCrewBtn: "Registrar Nueva Cuadrilla",
+    crewLeader: "Líder de Cuadrilla / Supervisor",
+    assignedProject: "Proyecto Asignado",
+    operationalZone: "Zona Operativa",
+    status: "Estado",
     viewerRestricted: "Modo visualizador: Creación restringida",
     lead: "Líder",
     site: "Sitio",
@@ -122,11 +140,10 @@ const t = {
     fleetSub: "Monitoree vehículos de campo, niveles de combustible, horas de mantenimiento y asignaciones.",
     registerFleetBtn: "Registrar Activo de Flota",
     unitAsset: "Activo / Unidad",
-    assignedProject: "Proyecto Asignado",
+    assignedProjectField: "Proyecto Asignado",
     locationSite: "Ubicación / Sitio",
     fuelLevel: "Nivel de Combustible",
     opHours: "Horas de Operación",
-    status: "Estado",
     trashHeader: "Papelera de Cumplimiento y Auditoría",
     trashSub: "Los elementos eliminados se archivan de forma segura. Los administradores pueden restaurarlos.",
     deletedRecords: "Registros Eliminados (Papelera)",
@@ -135,16 +152,18 @@ const t = {
     cancel: "Cancelar",
     saveProject: "Guardar Proyecto",
     registerUnit: "Registrar Unidad",
+    registerCrewTitle: "Registrar Cuadrilla de Campo",
     projectName: "Nombre del Proyecto",
     projectLead: "Líder de Proyecto",
     siteLocation: "Ubicación / Sitio",
     startDate: "Fecha de Inicio",
     endDate: "Fecha de Fin",
-    unitName: "Nombre del Activo"
+    unitName: "Nombre del Activo",
+    crewNamePlaceholder: "ej., Escuadrón Alnardo Velasquez",
+    zonePlaceholder: "ej., Caracas / Chacao"
   }
 };
 
-// Helper to get YYYY-MM-DD relative to today (so default projects always appear around the current week)
 const getRelativeDateStr = (daysFromToday) => {
   const d = new Date();
   d.setDate(d.getDate() + daysFromToday);
@@ -154,7 +173,6 @@ const getRelativeDateStr = (daysFromToday) => {
   return `${year}-${month}-${day}`;
 };
 
-// Parse YYYY-MM-DD cleanly in local time
 const parseLocalDate = (dateStr) => {
   const [y, m, d] = dateStr.split('-').map(Number);
   return new Date(y, m - 1, d, 0, 0, 0, 0);
@@ -177,11 +195,10 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Dynamic Week Generator (Mon - Sun)
   const getWeekDays = (offset) => {
     const now = new Date();
     const baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (offset * 7));
-    const currentDayOfWeek = baseDate.getDay(); // 0 = Sun, 1 = Mon...
+    const currentDayOfWeek = baseDate.getDay();
     const distanceToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
     const monday = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + distanceToMonday);
 
@@ -212,7 +229,6 @@ export default function App() {
 
   const currentWeekDays = getWeekDays(weekOffset);
 
-  // Calculate Gantt grid position (1-7) for a project against the currently displayed week
   const getGanttBarPlacement = (startDateStr, endDateStr, weekDays) => {
     if (!startDateStr || !endDateStr) return null;
     const projStart = parseLocalDate(startDateStr);
@@ -220,7 +236,6 @@ export default function App() {
     const weekStart = weekDays[0].date;
     const weekEnd = weekDays[6].date;
 
-    // If project finishes before this week starts or begins after this week ends
     if (projEnd < weekStart || projStart > weekEnd) {
       return null;
     }
@@ -236,7 +251,7 @@ export default function App() {
     return { startCol, spanCol };
   };
 
-  // Projects State with Real Start/End Dates & Asana-Style Tasks
+  // Projects State
   const [projects, setProjects] = useState([
     { 
       id: 1, 
@@ -285,6 +300,17 @@ export default function App() {
     }
   ]);
 
+  // Active Field Crews State
+  const [crews, setCrews] = useState([
+    { id: 1, leader: 'Alnardo Velasquez', project: 'Avila Tech Backbone', zone: 'Caracas Norte', status: 'Deployed' },
+    { id: 2, leader: 'Wilmer Diaz', project: 'Avila Tech Backbone', zone: 'Caracas Este (Chacao)', status: 'Deployed' },
+    { id: 3, leader: 'Elio Franco', project: 'Regional Microwave Link', zone: 'Oriente (Puerto La Cruz)', status: 'Deployed' },
+    { id: 4, leader: 'José Mata', project: 'Regional Microwave Link', zone: 'El Tigre', status: 'Active' },
+    { id: 5, leader: 'Francisco Cardona', project: 'Cojedes Node Integration', zone: 'Cojedes / Yaritagua', status: 'Deployed' },
+    { id: 6, leader: 'Deivis Bompart', project: 'WL Infrastructure Framework', zone: 'Centro / Calabozo', status: 'Deployed' },
+    { id: 7, leader: 'Jaime Quevedo', project: 'WL Infrastructure Framework', zone: 'Carabobo / Cojedes', status: 'Active' }
+  ]);
+
   const [fleet, setFleet] = useState([
     { id: 101, unit: 'Truck 04 - Ford F-350', project: 'Avila Tech Backbone', site: 'Caracas Norte', fuel: '75%', hours: '1,420 hrs', status: 'Deployed' },
     { id: 102, unit: 'Crane Rig 02 - Isuzu', project: 'Microwave Link Upgrade', site: 'Puerto La Cruz', fuel: '40%', hours: '3,100 hrs', status: 'Active' },
@@ -292,14 +318,16 @@ export default function App() {
   ]);
 
   const [auditLogs, setAuditLogs] = useState([
-    { id: 1, timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), user: 'Cipriano Villalba', action: 'Initialized dynamic Gantt schedule & task workflow', category: 'Operations' }
+    { id: 1, timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), user: 'Cipriano Villalba', action: 'Initialized Field Crews telemetry and schedule hub', category: 'Operations' }
   ]);
 
   const [trashBin, setTrashBin] = useState([]);
 
-  // Modals & Dynamic Task Additions
+  // Modals
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showFleetModal, setShowFleetModal] = useState(false);
+  const [showCrewModal, setShowCrewModal] = useState(false);
+  
   const [newProject, setNewProject] = useState({ 
     name: '', 
     site: '', 
@@ -309,6 +337,7 @@ export default function App() {
     endDate: getRelativeDateStr(4)
   });
   const [newFleet, setNewFleet] = useState({ unit: '', project: '', site: '', fuel: '100%', hours: '0 hrs' });
+  const [newCrew, setNewCrew] = useState({ leader: '', project: 'Avila Tech Backbone', zone: '', status: 'Deployed' });
   const [newTaskInput, setNewTaskInput] = useState({});
 
   const getProjectProgress = (tasks) => {
@@ -368,6 +397,16 @@ export default function App() {
     setShowFleetModal(false);
   };
 
+  const handleAddCrew = (e) => {
+    e.preventDefault();
+    if (!newCrew.leader) return;
+    const item = { id: Date.now(), ...newCrew };
+    setCrews([item, ...crews]);
+    setAuditLogs([{ id: Date.now(), timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), user: activeRole, action: `Registered field crew under "${newCrew.leader}"`, category: 'Crews' }, ...auditLogs]);
+    setNewCrew({ leader: '', project: 'Avila Tech Backbone', zone: '', status: 'Deployed' });
+    setShowCrewModal(false);
+  };
+
   const softDeleteProject = (id) => {
     const target = projects.find(p => p.id === id);
     if (!target) return;
@@ -391,7 +430,6 @@ export default function App() {
     }, ...projects]);
   };
 
-  // Reusable Week Navigation Bar
   const renderWeekControls = () => (
     <div className="flex flex-wrap items-center justify-between gap-2 mb-4 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
       <div className="flex items-center space-x-2">
@@ -505,6 +543,13 @@ export default function App() {
             <span>{dict.tabs.projects}</span>
           </button>
           <button 
+            onClick={() => setActiveTab('crews')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'crews' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
+          >
+            <Users className="w-4 h-4" />
+            <span>{dict.tabs.crews}</span>
+          </button>
+          <button 
             onClick={() => setActiveTab('fleet')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'fleet' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
           >
@@ -535,20 +580,20 @@ export default function App() {
 
               <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{dict.kpi.activeCrews}</span>
+                  <Users className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div className="text-2xl font-bold mt-2">{crews.length} Teams</div>
+                <p className="text-xs text-indigo-400 mt-1 font-medium">{dict.kpi.deployedRegions}</p>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{dict.kpi.fleetDeployed}</span>
                   <Truck className="w-5 h-5 text-indigo-500" />
                 </div>
                 <div className="text-2xl font-bold mt-2">{fleet.length} Units</div>
                 <p className="text-xs text-emerald-500 mt-1 font-medium">{dict.kpi.telemetryConnected}</p>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{dict.kpi.activeCrews}</span>
-                  <Wrench className="w-5 h-5 text-indigo-500" />
-                </div>
-                <div className="text-2xl font-bold mt-2">12 Active</div>
-                <p className="text-xs text-indigo-400 mt-1 font-medium">{dict.kpi.deployedRegions}</p>
               </div>
 
               <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm">
@@ -663,7 +708,6 @@ export default function App() {
               {renderWeekControls()}
 
               <div className="min-w-[720px]">
-                {/* Header Row */}
                 <div className="grid grid-cols-12 gap-2 border-b border-slate-200 dark:border-slate-800 pb-3 text-xs font-bold text-slate-400">
                   <div className="col-span-4 flex items-center">Project & Site</div>
                   <div className="col-span-8 grid grid-cols-7 text-center">
@@ -682,7 +726,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Rows */}
                 <div className="divide-y divide-slate-200 dark:divide-slate-800/60">
                   {projects.map(proj => {
                     const progress = getProjectProgress(proj.tasks);
@@ -769,7 +812,6 @@ export default function App() {
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dict.lead}: {proj.lead}</p>
                       <p className="text-[11px] text-slate-400 font-mono mt-1">{proj.startDate} → {proj.endDate}</p>
                       
-                      {/* Overall Progress Bar */}
                       <div className="mt-4">
                         <div className="flex justify-between text-xs mb-1 font-medium">
                           <span className="text-slate-400">{dict.progress}</span>
@@ -780,7 +822,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Asana-Style Task Checklist */}
                       <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
                         <h5 className="text-xs font-bold mb-3 flex items-center justify-between">
                           <span className="flex items-center space-x-1.5">
@@ -808,7 +849,6 @@ export default function App() {
                           ))}
                         </div>
 
-                        {/* Add Task Input */}
                         {activeRole !== 'Viewer' && (
                           <div className="mt-3 flex space-x-2">
                             <input 
@@ -848,7 +888,52 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: FLEET TELEMETRY */}
+        {/* TAB 4: ACTIVE FIELD CREWS */}
+        {activeTab === 'crews' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold">{dict.crewsHeader}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{dict.crewsSub}</p>
+              </div>
+              {activeRole !== 'Viewer' && (
+                <button 
+                  onClick={() => setShowCrewModal(true)}
+                  className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-semibold transition shadow-md shadow-indigo-600/20"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{dict.registerCrewBtn}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {crews.map(crew => (
+                <div key={crew.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-800 p-6 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{crew.status}</span>
+                      <Users className="w-4 h-4 text-indigo-500" />
+                    </div>
+                    <h4 className="font-bold text-base mt-2">{crew.leader}</h4>
+                    <p className="text-xs text-indigo-400 mt-1 flex items-center space-x-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>{crew.zone}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Project: <span className="font-medium text-slate-700 dark:text-slate-300">{crew.project}</span></p>
+                  </div>
+                  
+                  <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Field Supervisor ID: #{crew.id * 104}</span>
+                    <span className="text-indigo-400 font-semibold">Active Operational Squad</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: FLEET TELEMETRY */}
         {activeTab === 'fleet' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -872,7 +957,7 @@ export default function App() {
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-400">
                     <th className="p-4 font-semibold">{dict.unitAsset}</th>
-                    <th className="p-4 font-semibold">{dict.assignedProject}</th>
+                    <th className="p-4 font-semibold">{dict.assignedProjectField}</th>
                     <th className="p-4 font-semibold">{dict.locationSite}</th>
                     <th className="p-4 font-semibold">{dict.fuelLevel}</th>
                     <th className="p-4 font-semibold">{dict.opHours}</th>
@@ -903,7 +988,7 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 5: AUDIT & TRASH */}
+        {/* TAB 6: AUDIT & TRASH */}
         {activeTab === 'archive' && (
           <div className="space-y-6">
             <div>
@@ -1039,6 +1124,65 @@ export default function App() {
         </div>
       )}
 
+      {/* MODAL: NEW CREW TEAM */}
+      {showCrewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h3 className="text-base font-bold mb-4">{dict.registerCrewTitle}</h3>
+            <form onSubmit={handleAddCrew} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-400 mb-1">{dict.crewLeader}</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newCrew.leader} 
+                  onChange={e => setNewCrew({...newCrew, leader: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500" 
+                  placeholder={dict.crewNamePlaceholder} 
+                />
+              </div>
+              <div>
+                <label className="block text-slate-400 mb-1">{dict.assignedProject}</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newCrew.project} 
+                  onChange={e => setNewCrew({...newCrew, project: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500" 
+                  placeholder="e.g., Avila Tech Backbone" 
+                />
+              </div>
+              <div>
+                <label className="block text-slate-400 mb-1">{dict.operationalZone}</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newCrew.zone} 
+                  onChange={e => setNewCrew({...newCrew, zone: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500" 
+                  placeholder={dict.zonePlaceholder} 
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setShowCrewModal(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 font-semibold"
+                >
+                  {dict.cancel}
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow"
+                >
+                  {dict.registerCrewBtn}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: NEW FLEET UNIT */}
       {showFleetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1057,7 +1201,7 @@ export default function App() {
                 />
               </div>
               <div>
-                <label className="block text-slate-400 mb-1">{dict.assignedProject}</label>
+                <label className="block text-slate-400 mb-1">{dict.assignedProjectField}</label>
                 <input 
                   type="text" 
                   required
@@ -1068,7 +1212,7 @@ export default function App() {
                 />
               </div>
               <div>
-                <label className="block text-slate-400 mb-1">{dict.siteLocation}</label>
+                <label className="block text-slate-400 mb-1">{dict.locationSite}</label>
                 <input 
                   type="text" 
                   required
