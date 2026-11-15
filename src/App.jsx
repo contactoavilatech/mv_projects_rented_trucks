@@ -3,7 +3,7 @@ import {
   LayoutDashboard, FolderKanban, Truck, History, 
   Sun, Moon, UserCheck, Plus, Trash2, RotateCcw, 
   Activity, Layers, Globe, MapPin, Wrench, Users,
-  CalendarDays, CheckSquare, ChevronRight, ChevronLeft, Phone
+  CalendarDays, CheckSquare, ChevronRight, ChevronLeft
 } from 'lucide-react';
 
 // Bilingual Dictionary
@@ -179,8 +179,10 @@ const parseLocalDate = (dateStr) => {
 };
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(true);
-  const [lang, setLang] = useState('es');
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('avila_dark') ? JSON.parse(localStorage.getItem('avila_dark')) : true;
+  });
+  const [lang, setLang] = useState(() => localStorage.getItem('avila_lang') || 'es');
   const [activeRole, setActiveRole] = useState('Administrator');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -188,12 +190,131 @@ export default function App() {
   const dict = t[lang];
 
   useEffect(() => {
+    localStorage.setItem('avila_dark', JSON.stringify(darkMode));
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('avila_lang', lang);
+  }, [lang]);
+
+  // Persistent States via localStorage
+  const [projects, setProjects] = useState(() => {
+    const saved = localStorage.getItem('avila_projects');
+    if (saved) return JSON.parse(saved);
+    return [
+      { 
+        id: 1, 
+        name: 'Avila Tech Backbone Fiber Expansion', 
+        site: 'Caracas (Chacao / Baruta)', 
+        budget: '$45,000', 
+        status: 'Active', 
+        lead: 'Cipriano Villalba',
+        startDate: getRelativeDateStr(-4),
+        endDate: getRelativeDateStr(2),
+        tasks: [
+          { id: 101, title: 'COSSNA Safety Certification & Field Permits', completed: true },
+          { id: 102, title: 'Trenching & Fiber Duct Installation', completed: true },
+          { id: 103, title: 'Fusion Splicing & OTDR Testing', completed: false },
+          { id: 104, title: 'Final Client Protocol Sign-off', completed: false }
+        ]
+      },
+      { 
+        id: 2, 
+        name: 'Regional Microwave Link Upgrade', 
+        site: 'Oriente (Puerto La Cruz)', 
+        budget: '$120,000', 
+        status: 'In Progress', 
+        lead: 'Yenson Bause',
+        startDate: getRelativeDateStr(-2),
+        endDate: getRelativeDateStr(5),
+        tasks: [
+          { id: 201, title: 'Tower Rigging & Structural Inspection', completed: true },
+          { id: 202, title: 'Dish Antenna Mounting & Cabling', completed: false },
+          { id: 203, title: 'Frequency Alignment & Power Calibration', completed: false }
+        ]
+      },
+      { 
+        id: 3, 
+        name: 'Cojedes Infrastructure Node Integration', 
+        site: 'Cojedes / Yaritagua', 
+        budget: '$28,000', 
+        status: 'Planning', 
+        lead: 'Oscar Morales',
+        startDate: getRelativeDateStr(1),
+        endDate: getRelativeDateStr(8),
+        tasks: [
+          { id: 301, title: 'Site Survey & Logistics Procurement', completed: true },
+          { id: 302, title: 'Backup Generator & UPS Rack Installation', completed: false }
+        ]
+      }
+    ];
+  });
+
+  const [crews, setCrews] = useState(() => {
+    const saved = localStorage.getItem('avila_crews');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: 1, leader: 'Alnardo Velasquez', project: 'Avila Tech Backbone', zone: 'Caracas Norte', status: 'Deployed' },
+      { id: 2, leader: 'Wilmer Diaz', project: 'Avila Tech Backbone', zone: 'Caracas Este (Chacao)', status: 'Deployed' },
+      { id: 3, leader: 'Elio Franco', project: 'Regional Microwave Link', zone: 'Oriente (Puerto La Cruz)', status: 'Deployed' },
+      { id: 4, leader: 'José Mata', project: 'Regional Microwave Link', zone: 'El Tigre', status: 'Active' },
+      { id: 5, leader: 'Francisco Cardona', project: 'Cojedes Node Integration', zone: 'Cojedes / Yaritagua', status: 'Deployed' },
+      { id: 6, leader: 'Deivis Bompart', project: 'WL Infrastructure Framework', zone: 'Centro / Calabozo', status: 'Deployed' },
+      { id: 7, leader: 'Jaime Quevedo', project: 'WL Infrastructure Framework', zone: 'Carabobo / Cojedes', status: 'Active' }
+    ];
+  });
+
+  const [fleet, setFleet] = useState(() => {
+    const saved = localStorage.getItem('avila_fleet');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: 101, unit: 'Truck 04 - Ford F-350', project: 'Avila Tech Backbone', site: 'Caracas Norte', fuel: '75%', hours: '1,420 hrs', status: 'Deployed' },
+      { id: 102, unit: 'Crane Rig 02 - Isuzu', project: 'Microwave Link Upgrade', site: 'Puerto La Cruz', fuel: '40%', hours: '3,100 hrs', status: 'Active' },
+      { id: 103, unit: 'Service Van 08 - HiAce', project: 'Cojedes Node', site: 'Cojedes', fuel: '90%', hours: '850 hrs', status: 'Standby' }
+    ];
+  });
+
+  const [auditLogs, setAuditLogs] = useState(() => {
+    const saved = localStorage.getItem('avila_logs');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: 1, timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), user: 'Cipriano Villalba', action: 'Initialized Field Crews telemetry and schedule hub', category: 'Operations' }
+    ];
+  });
+
+  const [trashBin, setTrashBin] = useState(() => {
+    const saved = localStorage.getItem('avila_trash');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Sync with localStorage on state change
+  useEffect(() => { localStorage.setItem('avila_projects', JSON.stringify(projects)); }, [projects]);
+  useEffect(() => { localStorage.setItem('avila_crews', JSON.stringify(crews)); }, [crews]);
+  useEffect(() => { localStorage.setItem('avila_fleet', JSON.stringify(fleet)); }, [fleet]);
+  useEffect(() => { localStorage.setItem('avila_logs', JSON.stringify(auditLogs)); }, [auditLogs]);
+  useEffect(() => { localStorage.setItem('avila_trash', JSON.stringify(trashBin)); }, [trashBin]);
+
+  // Modals & Inputs
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [showFleetModal, setShowFleetModal] = useState(false);
+  const [showCrewModal, setShowCrewModal] = useState(false);
+  
+  const [newProject, setNewProject] = useState({ 
+    name: '', 
+    site: '', 
+    budget: '', 
+    lead: '',
+    startDate: getRelativeDateStr(0),
+    endDate: getRelativeDateStr(4)
+  });
+  const [newFleet, setNewFleet] = useState({ unit: '', project: '', site: '', fuel: '100%', hours: '0 hrs' });
+  const [newCrew, setNewCrew] = useState({ leader: '', project: 'Avila Tech Backbone', zone: '', status: 'Deployed' });
+  const [newTaskInput, setNewTaskInput] = useState({});
 
   const getWeekDays = (offset) => {
     const now = new Date();
@@ -236,9 +357,7 @@ export default function App() {
     const weekStart = weekDays[0].date;
     const weekEnd = weekDays[6].date;
 
-    if (projEnd < weekStart || projStart > weekEnd) {
-      return null;
-    }
+    if (projEnd < weekStart || projStart > weekEnd) return null;
 
     const effectiveStart = projStart < weekStart ? weekStart : projStart;
     const effectiveEnd = projEnd > weekEnd ? weekEnd : projEnd;
@@ -250,95 +369,6 @@ export default function App() {
 
     return { startCol, spanCol };
   };
-
-  // Projects State
-  const [projects, setProjects] = useState([
-    { 
-      id: 1, 
-      name: 'Avila Tech Backbone Fiber Expansion', 
-      site: 'Caracas (Chacao / Baruta)', 
-      budget: '$45,000', 
-      status: 'Active', 
-      lead: 'Cipriano Villalba',
-      startDate: getRelativeDateStr(-4),
-      endDate: getRelativeDateStr(2),
-      tasks: [
-        { id: 101, title: 'COSSNA Safety Certification & Field Permits', completed: true },
-        { id: 102, title: 'Trenching & Fiber Duct Installation', completed: true },
-        { id: 103, title: 'Fusion Splicing & OTDR Testing', completed: false },
-        { id: 104, title: 'Final Client Protocol Sign-off', completed: false }
-      ]
-    },
-    { 
-      id: 2, 
-      name: 'Regional Microwave Link Upgrade', 
-      site: 'Oriente (Puerto La Cruz)', 
-      budget: '$120,000', 
-      status: 'In Progress', 
-      lead: 'Yenson Bause',
-      startDate: getRelativeDateStr(-2),
-      endDate: getRelativeDateStr(5),
-      tasks: [
-        { id: 201, title: 'Tower Rigging & Structural Inspection', completed: true },
-        { id: 202, title: 'Dish Antenna Mounting & Cabling', completed: false },
-        { id: 203, title: 'Frequency Alignment & Power Calibration', completed: false }
-      ]
-    },
-    { 
-      id: 3, 
-      name: 'Cojedes Infrastructure Node Integration', 
-      site: 'Cojedes / Yaritagua', 
-      budget: '$28,000', 
-      status: 'Planning', 
-      lead: 'Oscar Morales',
-      startDate: getRelativeDateStr(1),
-      endDate: getRelativeDateStr(8),
-      tasks: [
-        { id: 301, title: 'Site Survey & Logistics Procurement', completed: true },
-        { id: 302, title: 'Backup Generator & UPS Rack Installation', completed: false }
-      ]
-    }
-  ]);
-
-  // Active Field Crews State
-  const [crews, setCrews] = useState([
-    { id: 1, leader: 'Alnardo Velasquez', project: 'Avila Tech Backbone', zone: 'Caracas Norte', status: 'Deployed' },
-    { id: 2, leader: 'Wilmer Diaz', project: 'Avila Tech Backbone', zone: 'Caracas Este (Chacao)', status: 'Deployed' },
-    { id: 3, leader: 'Elio Franco', project: 'Regional Microwave Link', zone: 'Oriente (Puerto La Cruz)', status: 'Deployed' },
-    { id: 4, leader: 'José Mata', project: 'Regional Microwave Link', zone: 'El Tigre', status: 'Active' },
-    { id: 5, leader: 'Francisco Cardona', project: 'Cojedes Node Integration', zone: 'Cojedes / Yaritagua', status: 'Deployed' },
-    { id: 6, leader: 'Deivis Bompart', project: 'WL Infrastructure Framework', zone: 'Centro / Calabozo', status: 'Deployed' },
-    { id: 7, leader: 'Jaime Quevedo', project: 'WL Infrastructure Framework', zone: 'Carabobo / Cojedes', status: 'Active' }
-  ]);
-
-  const [fleet, setFleet] = useState([
-    { id: 101, unit: 'Truck 04 - Ford F-350', project: 'Avila Tech Backbone', site: 'Caracas Norte', fuel: '75%', hours: '1,420 hrs', status: 'Deployed' },
-    { id: 102, unit: 'Crane Rig 02 - Isuzu', project: 'Microwave Link Upgrade', site: 'Puerto La Cruz', fuel: '40%', hours: '3,100 hrs', status: 'Active' },
-    { id: 103, unit: 'Service Van 08 - HiAce', project: 'Cojedes Node', site: 'Cojedes', fuel: '90%', hours: '850 hrs', status: 'Standby' }
-  ]);
-
-  const [auditLogs, setAuditLogs] = useState([
-    { id: 1, timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), user: 'Cipriano Villalba', action: 'Initialized Field Crews telemetry and schedule hub', category: 'Operations' }
-  ]);
-
-  const [trashBin, setTrashBin] = useState([]);
-
-  // Modals
-  const [showProjectModal, setShowProjectModal] = useState(false);
-  const [showFleetModal, setShowFleetModal] = useState(false);
-  const [showCrewModal, setShowCrewModal] = useState(false);
-  
-  const [newProject, setNewProject] = useState({ 
-    name: '', 
-    site: '', 
-    budget: '', 
-    lead: '',
-    startDate: getRelativeDateStr(0),
-    endDate: getRelativeDateStr(4)
-  });
-  const [newFleet, setNewFleet] = useState({ unit: '', project: '', site: '', fuel: '100%', hours: '0 hrs' });
-  const [newCrew, setNewCrew] = useState({ leader: '', project: 'Avila Tech Backbone', zone: '', status: 'Deployed' });
-  const [newTaskInput, setNewTaskInput] = useState({});
 
   const getProjectProgress = (tasks) => {
     if (!tasks || tasks.length === 0) return 0;
@@ -359,14 +389,12 @@ export default function App() {
   const handleAddTask = (projectId) => {
     const title = newTaskInput[projectId];
     if (!title) return;
-
     setProjects(projects.map(p => {
       if (p.id === projectId) {
         return { ...p, tasks: [...p.tasks, { id: Date.now(), title, completed: false }] };
       }
       return p;
     }));
-
     setNewTaskInput({ ...newTaskInput, [projectId]: '' });
   };
 
@@ -377,9 +405,7 @@ export default function App() {
       id: Date.now(), 
       ...newProject, 
       status: 'Active', 
-      tasks: [
-        { id: Date.now() + 1, title: 'Initial Mobilization & Equipment Dispatch', completed: false }
-      ]
+      tasks: [{ id: Date.now() + 1, title: 'Initial Mobilization & Equipment Dispatch', completed: false }]
     };
     setProjects([item, ...projects]);
     setAuditLogs([{ id: Date.now(), timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16), user: activeRole, action: `Created project "${newProject.name}"`, category: 'Project' }, ...auditLogs]);
@@ -464,9 +490,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200">
       
-      {/* Header */}
-      <header className="border-b border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      {/* Sticky Header & Navigation Bar */}
+      <div className="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-300 dark:border-slate-800 shadow-sm">
+        <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-indigo-600 text-white p-2 rounded-lg font-bold flex items-center justify-center shadow-md shadow-indigo-600/30">
               <Layers className="w-5 h-5" />
@@ -513,58 +539,58 @@ export default function App() {
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Navigation Tabs */}
-        <div className="flex space-x-2 border-b border-slate-300 dark:border-slate-800 pb-4 mb-8 overflow-x-auto">
+        {/* Navigation Tabs Bar */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex space-x-2 overflow-x-auto border-t border-slate-200 dark:border-slate-800/80">
           <button 
             onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'}`}
           >
             <LayoutDashboard className="w-4 h-4" />
             <span>{dict.tabs.dashboard}</span>
           </button>
           <button 
             onClick={() => setActiveTab('gantt')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'gantt' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'gantt' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'}`}
           >
             <CalendarDays className="w-4 h-4" />
             <span>{dict.tabs.gantt}</span>
           </button>
           <button 
             onClick={() => setActiveTab('projects')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'projects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'projects' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'}`}
           >
             <FolderKanban className="w-4 h-4" />
             <span>{dict.tabs.projects}</span>
           </button>
           <button 
             onClick={() => setActiveTab('crews')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'crews' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'crews' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'}`}
           >
             <Users className="w-4 h-4" />
             <span>{dict.tabs.crews}</span>
           </button>
           <button 
             onClick={() => setActiveTab('fleet')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'fleet' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'fleet' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'}`}
           >
             <Truck className="w-4 h-4" />
             <span>{dict.tabs.fleet}</span>
           </button>
           <button 
             onClick={() => setActiveTab('archive')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'archive' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800'}`}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${activeTab === 'archive' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'}`}
           >
             <History className="w-4 h-4" />
             <span>{dict.tabs.archive}</span>
           </button>
         </div>
+      </div>
 
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
         {/* TAB 1: DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
